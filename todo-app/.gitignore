@@ -3,3 +3,16 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Environment
+.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store
