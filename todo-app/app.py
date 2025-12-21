@@ -1,26 +1,25 @@
+import boto3
+import pymysql
 from flask import Flask, render_template, request, redirect
-import mysql.connector
-import subprocess
 
 app = Flask(__name__)
 
-def get_db_password():
-    cmd = [
-        "aws", "ssm", "get-parameter",
-        "--name", "/demo/mysql/password",
-        "--with-decryption",
-        "--query", "Parameter.Value",
-        "--output", "text",
-        "--region", "us-east-1"
-    ]
-    return subprocess.check_output(cmd).decode().strip()
-
 def get_db_connection():
-    return mysql.connector.connect(
-        host="demo-mysql-db.csjsgq4sko75.us-east-1.rds.amazonaws.com",
-        user="admin",
-        password=get_db_password(),
-        database="demodb"
+    ssm = boto3.client("ssm", region_name="us-east-1")
+
+    host = ssm.get_parameter(Name="/demo/mysql/host")["Parameter"]["Value"]
+    user = ssm.get_parameter(Name="/demo/mysql/user")["Parameter"]["Value"]
+    password = ssm.get_parameter(
+        Name="/demo/mysql/password",
+        WithDecryption=True
+    )["Parameter"]["Value"]
+    name = ssm.get_parameter(Name="/demo/mysql/name")["Parameter"]["Value"]
+
+    return pymysql.connect(
+        host=host,
+        user=user,
+        password=password,
+        database=name
     )
 
 @app.route("/", methods=["GET", "POST"])
@@ -34,14 +33,11 @@ def index():
         conn.commit()
         return redirect("/")
 
-    cursor.execute("SELECT task FROM todos")
-    tasks = cursor.fetchall()
+    cursor.execute("SELECT * FROM todos")
+    todos = cursor.fetchall()
 
-    cursor.close()
-    conn.close()
-
-    return render_template("index.html", tasks=tasks)
+    return render_template("index.html", todos=todos)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run()
 
